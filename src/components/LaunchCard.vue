@@ -5,7 +5,7 @@
     <div class="relative">
       <img
         v-if="launch.image"
-        :src="launch.image"
+        :src="launch.image.image_url"
         :alt="launch.name"
         class="w-full h-48 object-cover"
       />

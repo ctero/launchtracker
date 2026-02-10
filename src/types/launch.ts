@@ -20,7 +20,12 @@ export interface Launch {
       country_code: string;
     };
   };
-  image: string | null;
+  image: {
+    name: string;
+    image_url: string;
+    thumbnail_url: string;
+    credit: string;
+  } | null;
   rocket: {
     configuration: {
       full_name: string;

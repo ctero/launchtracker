@@ -1,6 +1,6 @@
 import type { PaginatedLaunchResponse } from "../types/launch";
 
-const API_BASE_URL = "https://ll.thespacedevs.com/2.2.0/";
+const API_BASE_URL = "https://ll.thespacedevs.com/2.3.0/";
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 const CACHE_KEY_PREFIX = "launchApi_cache_";
 
@@ -60,7 +60,7 @@ export const getUpcomingLaunches = async (
   limit: number = 10
 ): Promise<PaginatedLaunchResponse> => {
   const offset = (page - 1) * limit;
-  const url = new URL(`${API_BASE_URL}launch/upcoming/`);
+  const url = new URL(`${API_BASE_URL}launches/upcoming/`);
 
   url.searchParams.append("limit", limit.toString());
   url.searchParams.append("offset", offset.toString());
@@ -83,7 +83,7 @@ export const getPreviousLaunches = async (
   limit: number = 10
 ): Promise<PaginatedLaunchResponse> => {
   const offset = (page - 1) * limit;
-  const url = new URL(`${API_BASE_URL}launch/previous/`);
+  const url = new URL(`${API_BASE_URL}launches/previous/`);
 
   url.searchParams.append("limit", limit.toString());
   url.searchParams.append("offset", offset.toString());
