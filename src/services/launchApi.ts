@@ -1,6 +1,53 @@
-import type { Launch, PaginatedLaunchResponse } from "../types/launch";
+import type { PaginatedLaunchResponse } from "../types/launch";
 
 const API_BASE_URL = "https://ll.thespacedevs.com/2.2.0/";
+const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+const CACHE_KEY_PREFIX = "launchApi_cache_";
+
+interface CacheEntry<T> {
+  timestamp: number;
+  data: T;
+}
+
+/**
+ * Fetches data from the given URL, returning a cached response from
+ * localStorage if one exists and is less than 15 minutes old.
+ */
+const cachedFetch = async <T>(
+  url: string,
+  errorMessage: string
+): Promise<T> => {
+  const cacheKey = `${CACHE_KEY_PREFIX}${url}`;
+
+  try {
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      const entry: CacheEntry<T> = JSON.parse(cached);
+      if (Date.now() - entry.timestamp < CACHE_TTL_MS) {
+        return entry.data;
+      }
+    }
+  } catch {
+    // Corrupted cache entry — ignore and fetch fresh data
+  }
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`${errorMessage}: ${response.statusText}`);
+  }
+
+  const data: T = await response.json();
+
+  try {
+    const entry: CacheEntry<T> = { timestamp: Date.now(), data };
+    localStorage.setItem(cacheKey, JSON.stringify(entry));
+  } catch {
+    // localStorage full or unavailable — continue without caching
+  }
+
+  return data;
+};
 
 /**
  * Fetches upcoming rocket launches from the API
@@ -19,15 +66,10 @@ export const getUpcomingLaunches = async (
   url.searchParams.append("offset", offset.toString());
   url.searchParams.append("ordering", "window_start");
 
-  const response = await fetch(url.toString());
-
-  if (!response.ok) {
-    throw new Error(
-      `Failed to fetch upcoming launches: ${response.statusText}`
-    );
-  }
-
-  return response.json();
+  return cachedFetch<PaginatedLaunchResponse>(
+    url.toString(),
+    "Failed to fetch upcoming launches"
+  );
 };
 
 /**
@@ -47,13 +89,8 @@ export const getPreviousLaunches = async (
   url.searchParams.append("offset", offset.toString());
   url.searchParams.append("ordering", "-window_start");
 
-  const response = await fetch(url.toString());
-
-  if (!response.ok) {
-    throw new Error(
-      `Failed to fetch previous launches: ${response.statusText}`
-    );
-  }
-
-  return response.json();
+  return cachedFetch<PaginatedLaunchResponse>(
+    url.toString(),
+    "Failed to fetch previous launches"
+  );
 };
