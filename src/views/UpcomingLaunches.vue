@@ -50,7 +50,7 @@ const loading = ref(true);
 const error = ref<string | null>(null);
 const currentPage = ref(1);
 const totalItems = ref(0);
-const itemsPerPage = 10;
+const itemsPerPage = 15;
 
 const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage));
 

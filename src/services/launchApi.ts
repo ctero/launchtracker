@@ -1,4 +1,6 @@
 import type { PaginatedLaunchResponse } from "../types/launch";
+import type { PaginatedRocketResponse } from "../types/rocket";
+import type { PaginatedAgencyResponse } from "../types/agency";
 
 const API_BASE_URL = "https://ll.thespacedevs.com/2.3.0/";
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
@@ -57,7 +59,7 @@ const cachedFetch = async <T>(
  */
 export const getUpcomingLaunches = async (
   page: number = 1,
-  limit: number = 10
+  limit: number = 15
 ): Promise<PaginatedLaunchResponse> => {
   const offset = (page - 1) * limit;
   const url = new URL(`${API_BASE_URL}launches/upcoming/`);
@@ -80,7 +82,7 @@ export const getUpcomingLaunches = async (
  */
 export const getPreviousLaunches = async (
   page: number = 1,
-  limit: number = 10
+  limit: number = 15
 ): Promise<PaginatedLaunchResponse> => {
   const offset = (page - 1) * limit;
   const url = new URL(`${API_BASE_URL}launches/previous/`);
@@ -92,5 +94,30 @@ export const getPreviousLaunches = async (
   return cachedFetch<PaginatedLaunchResponse>(
     url.toString(),
     "Failed to fetch previous launches"
+  );
+};
+
+export const getActiveRockets = async (): Promise<PaginatedRocketResponse> => {
+  const url = new URL(`${API_BASE_URL}rockets/`);
+
+  url.searchParams.append("active", "true");
+  url.searchParams.append("pending_launches__gt", "0");
+
+  return cachedFetch<PaginatedRocketResponse>(
+    url.toString(),
+    "Failed to fetch active rockets"
+  );
+};
+
+export const getActiveAgencies = async (): Promise<PaginatedAgencyResponse> => {
+  const url = new URL(`${API_BASE_URL}agencies/`);
+
+  url.searchParams.append("mode", "list");
+  url.searchParams.append("limit", "15");
+  url.searchParams.append("ordering", "-pending_launches");
+
+  return cachedFetch<PaginatedAgencyResponse>(
+    url.toString(),
+    "Failed to fetch active agencies"
   );
 };
