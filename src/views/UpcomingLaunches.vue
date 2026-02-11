@@ -25,6 +25,12 @@
       <div><strong class="font-medium">Error:</strong> {{ error }}</div>
     </div>
 
+    <LaunchFilters
+      :rockets="rockets"
+      :agencies="agencies"
+      @filter="handleFilterChange"
+    />
+
     <LaunchList :launches="launches" :loading="loading" />
 
     <div v-if="!loading && !error && totalPages > 1" class="mt-8">
@@ -40,19 +46,44 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
-import { getUpcomingLaunches } from "../services/launchApi";
+import {
+  getUpcomingLaunches,
+  getActiveRockets,
+  getActiveAgencies,
+} from "../services/launchApi";
 import type { Launch, PaginatedLaunchResponse } from "../types/launch";
+import type { Rocket } from "../types/rocket";
+import type { Agency } from "../types/agency";
 import LaunchList from "../components/LaunchList.vue";
 import Pagination from "../components/Pagination.vue";
+import LaunchFilters from "../components/LaunchFilters.vue";
 
 const launches = ref<Launch[]>([]);
+const rockets = ref<Rocket[]>([]);
+const agencies = ref<Agency[]>([]);
 const loading = ref(true);
 const error = ref<string | null>(null);
 const currentPage = ref(1);
 const totalItems = ref(0);
 const itemsPerPage = 15;
 
+const selectedRocketId = ref<number | null>(null);
+const selectedAgencyId = ref<number | null>(null);
+
 const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage));
+
+const fetchFilterOptions = async () => {
+  try {
+    const [rocketRes, agencyRes] = await Promise.all([
+      getActiveRockets(),
+      getActiveAgencies(),
+    ]);
+    rockets.value = rocketRes.results;
+    agencies.value = agencyRes.results;
+  } catch (err) {
+    console.error("Failed to fetch filter options:", err);
+  }
+};
 
 const fetchLaunches = async (page: number) => {
   try {
@@ -61,7 +92,9 @@ const fetchLaunches = async (page: number) => {
 
     const response: PaginatedLaunchResponse = await getUpcomingLaunches(
       page,
-      itemsPerPage
+      itemsPerPage,
+      selectedRocketId.value ?? undefined,
+      selectedAgencyId.value ?? undefined
     );
 
     launches.value = response.results;
@@ -80,7 +113,17 @@ const handlePageChange = (page: number) => {
   fetchLaunches(page);
 };
 
+const handleFilterChange = (filters: {
+  rocketId: number | null;
+  agencyId: number | null;
+}) => {
+  selectedRocketId.value = filters.rocketId;
+  selectedAgencyId.value = filters.agencyId;
+  fetchLaunches(1);
+};
+
 onMounted(() => {
+  fetchFilterOptions();
   fetchLaunches(1);
 });
 </script>

@@ -2,7 +2,7 @@ import type { PaginatedLaunchResponse } from "../types/launch";
 import type { PaginatedRocketResponse } from "../types/rocket";
 import type { PaginatedAgencyResponse } from "../types/agency";
 
-const API_BASE_URL = "https://ll.thespacedevs.com/2.3.0/";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 const CACHE_KEY_PREFIX = "launchApi_cache_";
 
@@ -59,7 +59,9 @@ const cachedFetch = async <T>(
  */
 export const getUpcomingLaunches = async (
   page: number = 1,
-  limit: number = 15
+  limit: number = 15,
+  rocketId?: number,
+  agencyId?: number
 ): Promise<PaginatedLaunchResponse> => {
   const offset = (page - 1) * limit;
   const url = new URL(`${API_BASE_URL}launches/upcoming/`);
@@ -67,6 +69,13 @@ export const getUpcomingLaunches = async (
   url.searchParams.append("limit", limit.toString());
   url.searchParams.append("offset", offset.toString());
   url.searchParams.append("ordering", "window_start");
+
+  if (rocketId) {
+    url.searchParams.append("rocket__configuration__id", rocketId.toString());
+  }
+  if (agencyId) {
+    url.searchParams.append("lsp__id", agencyId.toString());
+  }
 
   return cachedFetch<PaginatedLaunchResponse>(
     url.toString(),
@@ -98,10 +107,12 @@ export const getPreviousLaunches = async (
 };
 
 export const getActiveRockets = async (): Promise<PaginatedRocketResponse> => {
-  const url = new URL(`${API_BASE_URL}rockets/`);
+  const url = new URL(`${API_BASE_URL}launcher_configurations/`);
 
+  url.searchParams.append("mode", "list");
   url.searchParams.append("active", "true");
-  url.searchParams.append("pending_launches__gt", "0");
+  url.searchParams.append("pending_launches__gt", "3");
+  url.searchParams.append("limit", "30");
 
   return cachedFetch<PaginatedRocketResponse>(
     url.toString(),
@@ -113,8 +124,9 @@ export const getActiveAgencies = async (): Promise<PaginatedAgencyResponse> => {
   const url = new URL(`${API_BASE_URL}agencies/`);
 
   url.searchParams.append("mode", "list");
-  url.searchParams.append("limit", "15");
-  url.searchParams.append("ordering", "-pending_launches");
+  url.searchParams.append("limit", "30");
+  url.searchParams.append("pending_launches__gt", "3");
+  //url.searchParams.append("ordering", "-pending_launches");
 
   return cachedFetch<PaginatedAgencyResponse>(
     url.toString(),
