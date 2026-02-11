@@ -6,6 +6,9 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 const CACHE_KEY_PREFIX = "launchApi_cache_";
 
+/** Maximum number of launches to fetch in a single bulk request. */
+const BULK_FETCH_LIMIT = 200;
+
 interface CacheEntry<T> {
   timestamp: number;
   data: T;
@@ -52,30 +55,16 @@ const cachedFetch = async <T>(
 };
 
 /**
- * Fetches upcoming rocket launches from the API
- * @param page The page number to fetch (default: 1)
- * @param limit The number of results per page (default: 10)
- * @returns Promise resolving to PaginatedLaunchResponse
+ * Fetches a large batch of upcoming rocket launches from the API.
+ * Returns up to BULK_FETCH_LIMIT results in a single request so that
+ * pagination and filtering can be handled entirely on the client side.
  */
-export const getUpcomingLaunches = async (
-  page: number = 1,
-  limit: number = 15,
-  rocketId?: number,
-  agencyId?: number
-): Promise<PaginatedLaunchResponse> => {
-  const offset = (page - 1) * limit;
+export const getUpcomingLaunches = async (): Promise<PaginatedLaunchResponse> => {
   const url = new URL(`${API_BASE_URL}launches/upcoming/`);
 
-  url.searchParams.append("limit", limit.toString());
-  url.searchParams.append("offset", offset.toString());
+  url.searchParams.append("limit", BULK_FETCH_LIMIT.toString());
+  url.searchParams.append("offset", "0");
   url.searchParams.append("ordering", "window_start");
-
-  if (rocketId) {
-    url.searchParams.append("rocket__configuration__id", rocketId.toString());
-  }
-  if (agencyId) {
-    url.searchParams.append("lsp__id", agencyId.toString());
-  }
 
   return cachedFetch<PaginatedLaunchResponse>(
     url.toString(),
@@ -84,20 +73,15 @@ export const getUpcomingLaunches = async (
 };
 
 /**
- * Fetches previous rocket launches from the API
- * @param page The page number to fetch (default: 1)
- * @param limit The number of results per page (default: 10)
- * @returns Promise resolving to PaginatedLaunchResponse
+ * Fetches a large batch of previous rocket launches from the API.
+ * Returns up to BULK_FETCH_LIMIT results in a single request so that
+ * pagination can be handled entirely on the client side.
  */
-export const getPreviousLaunches = async (
-  page: number = 1,
-  limit: number = 15
-): Promise<PaginatedLaunchResponse> => {
-  const offset = (page - 1) * limit;
+export const getPreviousLaunches = async (): Promise<PaginatedLaunchResponse> => {
   const url = new URL(`${API_BASE_URL}launches/previous/`);
 
-  url.searchParams.append("limit", limit.toString());
-  url.searchParams.append("offset", offset.toString());
+  url.searchParams.append("limit", BULK_FETCH_LIMIT.toString());
+  url.searchParams.append("offset", "0");
   url.searchParams.append("ordering", "-window_start");
 
   return cachedFetch<PaginatedLaunchResponse>(
@@ -126,7 +110,6 @@ export const getActiveAgencies = async (): Promise<PaginatedAgencyResponse> => {
   url.searchParams.append("mode", "list");
   url.searchParams.append("limit", "30");
   url.searchParams.append("pending_launches__gt", "3");
-  //url.searchParams.append("ordering", "-pending_launches");
 
   return cachedFetch<PaginatedAgencyResponse>(
     url.toString(),

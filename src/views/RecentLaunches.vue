@@ -25,13 +25,14 @@
       <div><strong class="font-medium">Error:</strong> {{ error }}</div>
     </div>
 
-    <LaunchList :launches="launches" :loading="loading" />
+    <LaunchList :launches="paginatedLaunches" :loading="loading" />
 
     <div v-if="!loading && !error && totalPages > 1" class="mt-8">
       <Pagination
         :current-page="currentPage"
         :total-pages="totalPages"
-        :total-items="totalItems"
+        :total-items="allLaunches.length"
+        :items-per-page="itemsPerPage"
         @page-change="handlePageChange"
       />
     </div>
@@ -41,46 +42,50 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
 import { getPreviousLaunches } from "../services/launchApi";
-import type { Launch, PaginatedLaunchResponse } from "../types/launch";
+import type { Launch } from "../types/launch";
 import LaunchList from "../components/LaunchList.vue";
 import Pagination from "../components/Pagination.vue";
 
-const launches = ref<Launch[]>([]);
+/** Full set of launches fetched once from the API. */
+const allLaunches = ref<Launch[]>([]);
 const loading = ref(true);
 const error = ref<string | null>(null);
 const currentPage = ref(1);
-const totalItems = ref(0);
-const itemsPerPage = 10;
+const itemsPerPage = 15;
 
-const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage));
+const totalPages = computed(() =>
+  Math.ceil(allLaunches.value.length / itemsPerPage)
+);
 
-const fetchLaunches = async (page: number) => {
+/** The slice of allLaunches for the current page. */
+const paginatedLaunches = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage;
+  return allLaunches.value.slice(start, start + itemsPerPage);
+});
+
+const fetchLaunches = async () => {
   try {
     loading.value = true;
     error.value = null;
 
-    const response: PaginatedLaunchResponse = await getPreviousLaunches(
-      page,
-      itemsPerPage
-    );
+    const response = await getPreviousLaunches();
 
-    launches.value = response.results;
-    totalItems.value = response.count;
-    currentPage.value = page;
+    allLaunches.value = response.results;
+    currentPage.value = 1;
   } catch (err) {
     error.value =
       err instanceof Error ? err.message : "Failed to fetch recent launches";
-    launches.value = [];
+    allLaunches.value = [];
   } finally {
     loading.value = false;
   }
 };
 
 const handlePageChange = (page: number) => {
-  fetchLaunches(page);
+  currentPage.value = page;
 };
 
 onMounted(() => {
-  fetchLaunches(1);
+  fetchLaunches();
 });
 </script>

@@ -8,6 +8,10 @@ export interface Launch {
     abbrev: string;
     description: string;
   };
+  launch_service_provider: {
+    id: number;
+    name: string;
+  };
   mission: {
     name: string;
     description: string;
@@ -28,6 +32,7 @@ export interface Launch {
   } | null;
   rocket: {
     configuration: {
+      id: number;
       full_name: string;
     };
   };
